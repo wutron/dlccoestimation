@@ -1,0 +1,209 @@
+#!/usr/bin/env python
+# DLC Coestimation
+
+import sys
+import time
+import random
+from os.path import dirname
+import optparse
+
+# dlc_coest library
+try:
+    import dlc_coest
+except ImportError:
+    sys.path.append(dirname(dirname(sys.argv[0])) + "/python")
+    import dlc_coest
+
+import dlc_coest.recon
+
+# rasmus, compbio libs
+from rasmus import util,  treelib
+from compbio import phylo, birthdeath
+
+# dlcoal lib
+import dlcoal
+
+#=============================================================================
+# options
+usage = "usage: %prog [options]"
+o = optparse.OptionParser(usage=usage)
+
+o.add_option("-A","--alignment", dest="alignment", metavar="ALIGNMENT",
+	     help="sequence data (phylip format))")
+o.add_option("-p", "--partitions", dest="partitions", metavar="PARTITIONS",
+	     help="partition file of DNA sequence data")
+o.add_option("-s", "--stree", dest="stree", metavar="SPECIES_TREE",
+             help="species tree file in newick format (myr)")
+o.add_option("-S", "--smap", dest="smap", metavar="GENE_TO_SPECIES_MAP",
+             help="gene to species map")
+
+g = optparse.OptionGroup(o, "Model Parameters")
+o.add_option_group(g)
+g.add_option("-n", "--popsizes", dest="popsizes", metavar="POPULATION_SIZES",
+             type="float",
+             help="Effective population size")
+g.add_option("-D", "--duprate", dest="duprate", metavar="DUPLICATION_RATE",
+             type="float",
+             help="rate of a gene duplication (dups/gene/myr)")
+g.add_option("-L", "--lossrate", dest="lossrate", metavar="LOSS_RATE",
+             type="float",
+             help="rate of gene loss (losses/gene/myr)")
+g.add_option("-g", "--gentime", dest="gentime", metavar="GENRATION_TIME",
+             type="float",
+             help="generation time (years)")
+g.add_option("", "--subrate", dest="subrate", metavar="SUBSTITUTION RATE",
+             type="float",
+             help="substitution rate in sub/site/myr")
+
+g = optparse.OptionGroup(o, "Search Parameters")
+o.add_option_group(g)
+g.add_option("-i", "--iter", dest="iter", metavar="ITERATIONS",
+             type="int", default=100,
+             help="number of search iterations")
+g.add_option("", "--nsearch_coal", dest="nsearch_coal", metavar="NUMBER_OF_COAL_SEARCH",
+	     type="int", default=20,
+             help="number of search iterations for the coalescent tree when fixing the locus tree")
+g.add_option("", "--nsamples_coal", dest="nsamples_coal", metavar="NUMBER_OF_COAL_SAMPLES",
+	     type="int", default=10,
+             help="number of samples to take when doing integration over coalescent tree branch lengths")
+g.add_option("", "--nprescreen_coal", dest="nprescreen_coal", metavar="NUMBER_OF_COAL_PRESCREENS",
+             type="int", default=50,
+             help="number of prescreening iterations when estimating the coalescent tree")
+g.add_option("", "--init_coal_tree", dest="init_coal_tree", metavar="INITIAL_COAL_TREE",
+	     default=None, help="initial coal tree for search")
+g.add_option("", "--nsearch_locus", dest="nsearch_locus", metavar="NUMBER_OF_LOCUS_SEARCH",
+	     type="int", default=1000,
+             help="number of search iterations for the locus tree when fixing the coalescent tree")
+g.add_option("", "--nsamples_locus", dest="nsamples_locus", metavar="NUMBER_OF_LOCUS_SAMPLES",
+	     type="int", default=100,
+             help="number of samples to take when doing integration over locus tree branch lengths")
+g.add_option("", "--nprescreen_locus", dest="nprescreen_locus", metavar="NUMBER_OF_LOCUS_PRESCREENS",
+             type="int", default=50,
+             help="number of prescreening iterations when estimating the locus tree")
+g.add_option("", "--init_locus_tree", dest="init_locus_tree", metavar="INITIAL_LOCUS_TREE",
+	     default=None, help="initial locus tree for search")
+
+g = optparse.OptionGroup(o, "Miscellaneous")
+o.add_option_group(g)
+g.add_option("-x", "--seed", dest="seed", metavar="RANDOM_SEED",
+             type="int", default=None,
+             help="random number seed")
+g.add_option("-l", "--log", dest="log", action="store_true",
+             help="if given, output debugging log")
+g.add_option("", "--threads", dest="threads", metavar="NUMBER_OF_THREADS",
+             type="int", default=1,
+             help="number of threads to run pll")
+g.add_option("", "--eps", dest="eps", metavar="EPSILON",
+             type="float", default=2.0,
+             help="criterion to determine convergence")
+
+g = optparse.OptionGroup(o, "File extensions")
+o.add_option_group(g)
+g.add_option("-I", "--inext", dest="inext", metavar="INPUT_EXT",
+             default="",
+             help="input file extension (default='')")
+g.add_option("-O", "--outext", dest="outext", metavar="OUTPUT_EXT",
+             default=".dlca",
+             help="output file extension (default='.dlca')")
+
+
+conf, args = o.parse_args()
+
+if len(args) != 0:
+    o.print_help()
+    sys.exit(1)
+
+#=============================================================================
+
+def check_tree(tree, name=""):
+    """Ensure that tree is binary"""
+    for node in tree:
+        if len(node.children) not in (0, 2):
+            raise Exception("tree is not binary: %s" % name)
+
+
+#=============================================================================
+# read inputs
+
+alnfile = conf.alignment
+partfile = conf.partitions
+
+stree = treelib.read_tree(conf.stree)
+smap = phylo.read_gene2species(conf.smap)
+times = treelib.get_tree_timestamps(stree)
+# branch lengths should be millions of years (myr)
+
+if conf.init_locus_tree:
+    init_locus_tree = treelib.read_tree(conf.init_locus_tree)
+else:
+    init_locus_tree = None
+
+if conf.init_coal_tree:
+    init_coal_tree = treelib.read_tree(conf.init_coal_tree)
+else:
+    init_coal_tree = None
+
+# rates should events/gene/myr
+duprate = conf.duprate
+lossrate = conf.lossrate
+
+
+# get popsizes
+#  NOTE: popsize is multiplied by 2 to account for diploid species.
+#  Also popsize scaled to fit species tree time units
+#  (* generation time / 1e6)
+#  This is done in order to allow different generation times per species
+#  tree branch, and keeps all trees (gene, locus, species) ultrametric.
+if conf.popsizes is None:
+    # scale popsizes by generation time
+    popsizes = {}
+    for node in stree:
+        popsizes[node.name] = (2 * float(node.data["pop"]) *
+                               float(node.data["g"]) / 1e6)
+else:
+    popsizes = 2 * conf.popsizes * conf.gentime / 1e6
+
+
+# start logging
+if conf.log:
+    log_out = open(
+        util.replace_ext(conf.alignment, conf.inext, conf.outext + ".log"), "w")
+else:
+    log_out = dlc_coest.NullLog()
+
+
+# set random seed
+if conf.seed is None:
+    conf.seed = int(time.time() * 100)
+random.seed(conf.seed)
+if dlcoal.dlcoalc:
+    dlcoal.dlcoalc.srand(conf.seed)
+log_out.write("seed: %d\n" % conf.seed)
+
+
+# check input trees
+if conf.init_coal_tree:
+    init_coal_tree = treelib.read_tree(conf.init_coal_tree)
+    check_tree(init_coal_tree, conf.init_coal_tree)
+else:
+    init_coal_tree = None
+if conf.init_locus_tree:
+    init_locus_tree = treelib.read_tree(conf.init_locus_tree)
+    check_tree(init_locus_tree, conf.init_locus_tree)
+else:
+    init_locus_tree = None
+
+# perform reconciliation
+maxrecon = dlc_coest.recon.dlc_coest_recon(
+    alnfile, partfile, stree, smap,
+    popsizes, duprate, lossrate, subrate=conf.subrate,
+    premean=.5 * times[stree.root],
+    niter=conf.iter,
+    nsearch_coal=conf.nsearch_coal, nsamples_coal=conf.nsamples_coal, nprescreen_coal=conf.nprescreen_coal, init_coal_tree=init_coal_tree, 
+    nsearch_locus=conf.nsearch_locus, nsamples_locus=conf.nsamples_locus, nprescreen_locus=conf.nprescreen_locus, init_locus_tree=init_locus_tree,
+    threads=conf.threads, seed=conf.seed, eps=conf.eps,
+    log=log_out)
+
+# write outputs
+out = util.replace_ext(conf.alignment, conf.inext, conf.outext)
+dlcoal.write_dlcoal_recon(out, maxrecon["coal_tree"], maxrecon)

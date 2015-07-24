@@ -1,0 +1,58 @@
+#
+# Makefile for development
+#
+
+
+PY_SRC_PATH=$(HOME)/research/src/compbio/python
+SPIMAP_SRC_PATH=$(HOME)/research/src/dlcoal/dlcoal/deps
+SPIMAP_CPP_PATH=$(HOME)/research/src/dlcoal/src/spidir
+DLCOAL_SRC_PATH=$(HOME)/research/src/dlcoal
+
+RASMUS_SRC_FILES = __init__.py \
+                   linked_list.py \
+                   plotting.py \
+                   tablelib.py \
+                   timer.py \
+                   treelib.py \
+                   treelib_parser.py \
+                   treelib_lex.py \
+                   treelib_tab.py \
+		   testing.py \
+	           textdraw.py \
+                   stats.py \
+                   svg.py \
+                   symbolic.py \
+                   util.py \
+                   ply/__init__.py \
+                   ply/lex.py \
+                   ply/yacc.py \
+                   vis/__init__.py \
+                   vis/treesvg.py
+
+COMPBIO_SRC_FILES = __init__.py \
+                    birthdeath.py \
+		    coal.py \
+                    fasta.py \
+                    phylo.py \
+                    seqlib.py \
+                    phylip.py
+
+SPIMAP_SRC_FILES = __init__.py \
+                   ctypes_export.py \
+                   topology_prior.py
+
+DLCOAL_SRC_FILES = __init__.py \
+                  duploss.py 
+
+# copy subset of python modules for packaging with spidir
+includedep:
+	mkdir python/dlc_coest/deps
+	touch python/dlc_coest/deps/__init__.py
+
+	./cp-deps.py $(PY_SRC_PATH)/rasmus python/dlc_coest/deps/rasmus $(RASMUS_SRC_FILES)
+	./cp-deps.py $(PY_SRC_PATH)/compbio python/dlc_coest/deps/compbio $(COMPBIO_SRC_FILES)
+	./cp-deps.py $(SPIMAP_SRC_PATH)/spidir python/dlc_coest/deps/spidir/ $(SPIMAP_SRC_FILES)
+	./cp-deps.py $(DLCOAL_SRC_PATH)/dlcoal python/dlc_coest/deps/dlcoal/ $(DLCOAL_SRC_FILES)
+	
+	mkdir -p src/spidir
+	cp $(SPIMAP_CPP_PATH)/*{.cpp,.h} src/spidir
