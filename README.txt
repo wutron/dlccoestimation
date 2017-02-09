@@ -1,20 +1,18 @@
-DLCoal (duplications, losses, and coalescence)
+DLC_COEST (duplications, losses, and coalescence coestimation)
 http://compbio.mit.edu/dlcoal/
-Matthew Rasmussen
+Yi-Chieh Wu, Bo Zhang
 
 =============================================================================
 ABOUT
 
-DLCoal is a software package containing the DLCoalRecon program as well as
-several other useful utilities for working with gene trees.
+DLC_COEST is a software package containing the dlc_coest reconciliation program 
+for working with gene trees.
 
-DLCoalRecon is a reconciliation program that maps a gene tree to species tree
-in order to determine how gene duplications and losses have occurred.  
-DLCoalRecon's unique feature is that it can perform reconciliation despite
-the presence of incomplete linegae sorting.
+dlc_coest is a reconciliation program that takes in a DNA sequence data and a species 
+tree and determines how gene duplications and losses have occurred, under the presence 
+of incomplete linegae sorting.
 
-DLCoal citation: 
-Rasmussen, Kellis.  A unified model of gene duplication, loss, and coalescence using a locus tree. Genome Research. 2012.
+DLC_COEST citation: 
 
 
 =============================================================================
@@ -55,44 +53,67 @@ USAGE
 Running dlcoal_recon with no arguments will print out its command-line usage:
 
 
-Usage: dlcoal_recon [options] GENE_TREE1 [GENE_TREE2 ...]
+Usage: dlc_coestimate [options]
 
 Options:
-  -h, --help            show this help message and exit
-  -s SPECIES_TREE, --stree=SPECIES_TREE
+    -h, --help            show this help message and exit
+    -A ALIGNMENT,    --alignment=ALIGNMENT
+                        sequence data (phylip format))
+    -p PARTITION_FILE  --partitions=PARTITION_FILE
+                       partition file of DNA sequence data 
+    -s SPECIES_TREE, --stree=SPECIES_TREE
                         species tree file in newick format (myr)
-  -S GENE_TO_SPECIES_MAP, --smap=GENE_TO_SPECIES_MAP
+    -S GENE_TO_SPECIES_MAP, --smap=GENE_TO_SPECIES_MAP
                         gene to species map
-  -n POPULATION_SIZE, --popsize=POPULATION_SIZE
+  
+  Model Parameters:
+    -n POPULATION_SIZE, --popsize=POPULATION_SIZE
                         Effective population size
-  -D DUPLICATION_RATE, --duprate=DUPLICATION_RATE
+    -D DUPLICATION_RATE, --duprate=DUPLICATION_RATE
                         rate of a gene duplication (dups/gene/myr)
-  -L LOSS_RATE, --lossrate=LOSS_RATE
+    -L LOSS_RATE, --lossrate=LOSS_RATE
                         rate of gene loss (losses/gene/myr)
-  -g GENRATION_TIME, --gentime=GENRATION_TIME
+    -g GENRATION_TIME, --gentime=GENRATION_TIME
                         generation time (years)
-  -i ITERATIONS, --iter=ITERATIONS
+    --subrate SUBSTITUTION_RATE, --subrate=SUBSTITUTION_RATE
+                        substitution rate in sub/site/myr
+    --beta BETA,    --beta=BETA
+                   log prob = beta * log likelihood + log prior
+ 
+  Search Parameters:
+    -i ITERATIONS, --iter=ITERATIONS
                         number of search iterations
+    --nsearch_coal NUMBER_OF_COAL_SEARCH, --nsearch_coal=NUMBER_OF_COAL_SEARCH
+          number of search iterations for the coalescent tree when fixing the locus tree
+    --nsamples_coal NUMBER_OF_COAL_SAMPLES, --nsamples_coal=NUMBER_OF_COAL_SAMPLES
+         number of samples taken when doing integration over coalescent tree branch lengths
+    --nprescreen_coal NUMBER_OF_COAL_PRESCREENS, --nprescreen_coal=NUMBER_OF_COAL_PRESCREENS
+         number of prescreening iterations when estimating the coalescent tree
+    --init_coal_tree INITIAL_COAL_TREE, --init_coal_tree=INITIAL_COAL_TREE
+                                         initial coal tree for search
+    --nsearch_locus NUMBER_OF_LOCUS_SEARCH, --nsearch_locus=NUMBER_OF_LOCUS_SEARCH
+          number of search iterations for the locus tree when fixing the coalescnet tree
+    --nsamples_locus NUMBER_OF_LOCUS_SAMPLES, --nsamples_locus=NUMBER_OF_LOCUS_SAMPLES
+         number of samples taken when doing integration over locus tree branch lengths
+    --nprescreen_locus NUMBER_OF_LOCUS_PRESCREENS, --nprescreen_locus=NUMBER_OF_LOCUS_PRESCREENS
+         number of prescreening iterations when estimating the locus tree
+    --init_locus_tree INITIAL_LOCUS_TREE, --init_locus_tree=INITIAL_LOCUS_TREE
+                                         initial locus tree for search
 
   File extensions:
     -I INPUT_EXT, --inext=INPUT_EXT
                         input file extension (default='')
     -O OUTPUT_EXT, --outext=OUTPUT_EXT
-                        output file extension (default='.dlcoal')
+                        output file extension (default='.dlca')
 
   Miscellaneous:
-    --nprescreen=NUM_PRESCREENS
-                        number of prescreening iterations
-    --nsamples=NUM_SAMPLES
-                        number of samples for dup-loss integration
-                        (default=100)
-    --init-locus-tree=TREE_FILE
-                        initial locus tree for search
     -x RANDOM_SEED, --seed=RANDOM_SEED
                         random number seed
     -l, --log           if given, output debugging log
-
-
+    --threads NUMBER_OF_THREADS, --threads=NUMBER_OF_THREADS
+                        number of threads to run pll
+    --eps EPSILON, --eps=EPSILON
+                        criterion to determine convergence
 #=============================================================================
 # Examples
 
@@ -102,7 +123,3 @@ in the DLCoal package.
 
 #=============================================================================
 # Documentation
-
-See doc/dlcoal-manual.html for further documentation of the software and
-its associated file-formats.
-
