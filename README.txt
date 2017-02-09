@@ -18,7 +18,7 @@ DLC_COEST citation:
 =============================================================================
 DEPENDENCIES
 
-DLCoal has the following requirements:
+DLC_COEST has the following requirements:
 
 - GNU Scientific library (GSL) http://www.gnu.org/software/gsl/
 - Python (2.5 or greater) http://python.org/
@@ -30,11 +30,11 @@ INSTALL
 NOTE: Makefile installation will work best on UNIX or CYGWIN (Windows).
 
 
-To compile the DLCoal library use the Makefile.
+To compile the DLC_COEST library use the Makefile.
 
     make
 
-Once compiled, to install the DLCoal programs (default install in /usr) use:
+Once compiled, to install the DLC_COEST programs (default install in /usr) use:
 
     make install
 
@@ -42,7 +42,7 @@ To specify your own installation path use:
     
     make install prefix=/usr/local
 
-DLCoal can also run directly from the source directory.  Simply add the
+DLC_COEST can also run directly from the source directory.  Simply add the
 bin/ directory to your PATH or create symlinks to the scripts within bin/
 to any directory on your PATH.
 
