@@ -17,8 +17,8 @@ RASMUS_SRC_FILES = __init__.py \
                    treelib_parser.py \
                    treelib_lex.py \
                    treelib_tab.py \
-		   testing.py \
-	           textdraw.py \
+                   testing.py \
+                   textdraw.py \
                    stats.py \
                    svg.py \
                    symbolic.py \
@@ -31,7 +31,7 @@ RASMUS_SRC_FILES = __init__.py \
 
 COMPBIO_SRC_FILES = __init__.py \
                     birthdeath.py \
-		    coal.py \
+                    coal.py \
                     fasta.py \
                     phylo.py \
                     seqlib.py \
@@ -42,7 +42,8 @@ SPIMAP_SRC_FILES = __init__.py \
                    topology_prior.py
 
 DLCOAL_SRC_FILES = __init__.py \
-                  duploss.py 
+                  duploss.py \
+                  recon.py
 
 # copy subset of python modules for packaging with spidir
 includedep:

@@ -247,7 +247,7 @@ def enum_labeled_histories_subtree(tree, subtree):
                 leaves.extend(l)
     # print start
     # print leaves
-    
+
     # recursive helper function to update current order (lst) and tochoose
     def helper(lst, tochoose):
         if len(tochoose) == 0:
@@ -266,7 +266,7 @@ def enum_labeled_histories_subtree(tree, subtree):
 
                 for local_order in helper(next_lst, next_tochoose):
                     yield local_order
-     
+
     lst = []
     tochoose = start
     for order in helper(lst, tochoose):

@@ -54,6 +54,9 @@ g.add_option("-g", "--gentime", dest="gentime", metavar="GENRATION_TIME",
 g.add_option("", "--subrate", dest="subrate", metavar="SUBSTITUTION RATE",
              type="float",
              help="substitution rate in sub/site/myr")
+g.add_option("", "--beta", dest="beta", metavar="BETA",
+             type="float",
+             help="log prob = beta * log likelihood + log prior")
 
 g = optparse.OptionGroup(o, "Search Parameters")
 o.add_option_group(g)
@@ -121,6 +124,14 @@ def check_tree(tree, name=""):
         if len(node.children) not in (0, 2):
             raise Exception("tree is not binary: %s" % name)
 
+def remove_bootstraps(tree):
+    """Remove bootstraps, if they exist"""
+    if "boot" in tree.default_data:
+        del tree.default_data["boot"]
+    for node in tree:
+        if "boot" in node.data:
+            del node.data["boot"]
+
 
 #=============================================================================
 # read inputs
@@ -135,11 +146,15 @@ times = treelib.get_tree_timestamps(stree)
 
 if conf.init_locus_tree:
     init_locus_tree = treelib.read_tree(conf.init_locus_tree)
+    check_tree(init_locus_tree, conf.init_locus_tree)
+    remove_bootstraps(init_locus_tree)
 else:
     init_locus_tree = None
 
 if conf.init_coal_tree:
     init_coal_tree = treelib.read_tree(conf.init_coal_tree)
+    check_tree(init_coal_tree, conf.init_coal_tree)
+    remove_bootstraps(init_coal_tree)
 else:
     init_coal_tree = None
 
@@ -181,28 +196,21 @@ if dlcoal.dlcoalc:
 log_out.write("seed: %d\n" % conf.seed)
 
 
-# check input trees
-if conf.init_coal_tree:
-    init_coal_tree = treelib.read_tree(conf.init_coal_tree)
-    check_tree(init_coal_tree, conf.init_coal_tree)
-else:
-    init_coal_tree = None
-if conf.init_locus_tree:
-    init_locus_tree = treelib.read_tree(conf.init_locus_tree)
-    check_tree(init_locus_tree, conf.init_locus_tree)
-else:
-    init_locus_tree = None
-
 # perform reconciliation
+util.tic()
 maxrecon = dlc_coest.recon.dlc_coest_recon(
     alnfile, partfile, stree, smap,
-    popsizes, duprate, lossrate, subrate=conf.subrate,
+    popsizes, duprate, lossrate, subrate=conf.subrate, beta=conf.beta,
     premean=.5 * times[stree.root],
     niter=conf.iter,
-    nsearch_coal=conf.nsearch_coal, nsamples_coal=conf.nsamples_coal, nprescreen_coal=conf.nprescreen_coal, init_coal_tree=init_coal_tree, 
-    nsearch_locus=conf.nsearch_locus, nsamples_locus=conf.nsamples_locus, nprescreen_locus=conf.nprescreen_locus, init_locus_tree=init_locus_tree,
+    nsearch_coal=conf.nsearch_coal, nsamples_coal=conf.nsamples_coal,
+    nprescreen_coal=conf.nprescreen_coal, init_coal_tree=init_coal_tree,
+    nsearch_locus=conf.nsearch_locus, nsamples_locus=conf.nsamples_locus,
+    nprescreen_locus=conf.nprescreen_locus, init_locus_tree=init_locus_tree,
     threads=conf.threads, seed=conf.seed, eps=conf.eps,
     log=log_out)
+time = util.toc()
+print "%s\t%s" % (conf.alignment, time)
 
 # write outputs
 out = util.replace_ext(conf.alignment, conf.inext, conf.outext)

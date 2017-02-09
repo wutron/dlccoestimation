@@ -99,7 +99,7 @@ dlc_coestimate \
     -D 0.0012 -L 0.0012 -n 1e6 \
     -g 0.1 --subrate 5e-2 \
     -i 100 \
-    --nsearch_coal 100 --nsamples_coal 20 --nprescreen_coal 20 \
+    --nsearch_coal 20 --nsamples_coal 1 --nprescreen_coal 20 \
     --nsearch_locus 100 --nsamples_locus 100 --nprescreen_locus 20 \
     --init_coal_tree sim-flies/0/0.raxml.tree \
     -x 1234 --threads 1 --eps 2 \
