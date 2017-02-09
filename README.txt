@@ -1,5 +1,5 @@
 DLC_COEST (duplications, losses, and coalescence coestimation)
-http://compbio.mit.edu/dlcoal/
+http://XXX
 Yi-Chieh Wu, Bo Zhang
 
 =============================================================================
